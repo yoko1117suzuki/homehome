@@ -2923,18 +2923,13 @@ function buildSlideshow(slides, s, date, titleOverride) {
     ANIM.forEach(c => els[prevIdx].classList.remove(c));
     els[prevIdx].classList.add(dir > 0 ? 'exit-left' : 'exit-right');
 
-    // 新スライドをenter位置にセット
+    // 新スライドをenter位置にセット→強制リフロー→activeへ
     ANIM.forEach(c => els[newIdx].classList.remove(c));
     const enterClass = dir > 0 ? 'enter-left' : 'enter-right';
     els[newIdx].classList.add(enterClass);
-
-    // 次フレームでactiveへ
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        els[newIdx].classList.remove(enterClass);
-        els[newIdx].classList.add('active');
-      });
-    });
+    void els[newIdx].offsetWidth; // 強制リフロー：transitionを確実に発火させる
+    els[newIdx].classList.remove(enterClass);
+    els[newIdx].classList.add('active');
 
     // UI更新
     document.getElementById('ss-dots').innerHTML = dotsHTML();
