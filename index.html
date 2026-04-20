@@ -2902,16 +2902,14 @@ function buildSlideshow(slides, s, date, titleOverride) {
     </div>`;
   document.body.appendChild(overlay);
 
-  // 初期状態：全スライドを右に隠す → 最初だけ表示
+  // 初期状態：classだけで管理（inline styleは使わない）
   const slideEls = [...overlay.querySelectorAll('.ss-slide')];
   slideEls.forEach((el, i) => {
-    el.style.transition = 'none';
-    el.style.transform   = i === 0 ? 'translateX(0)' : 'translateX(100%)';
-    el.style.opacity     = i === 0 ? '1' : '0';
-  });
-  // transitionを再有効化（次フレーム）
-  requestAnimationFrame(() => {
-    slideEls.forEach(el => { el.style.transition = ''; });
+    if (i === 0) {
+      el.classList.add('active');
+    } else {
+      el.classList.add('enter-left'); // 右に隠す
+    }
   });
 
   function goToSlide(newIdx, dir) {
@@ -2919,18 +2917,14 @@ function buildSlideshow(slides, s, date, titleOverride) {
     idx = newIdx;
     const els = [...overlay.querySelectorAll('.ss-slide')];
 
+    const ANIM = ['active','enter-left','enter-right','exit-left','exit-right'];
+
     // 現在スライドをexit
-    els[prevIdx].style.transform = '';
-    els[prevIdx].style.opacity   = '';
-    els[prevIdx].className = els[prevIdx].className
-      .replace(/\s*(active|enter-left|enter-right|exit-left|exit-right)/g, '').trim();
+    ANIM.forEach(c => els[prevIdx].classList.remove(c));
     els[prevIdx].classList.add(dir > 0 ? 'exit-left' : 'exit-right');
 
-    // 新スライドをenter位置にセット（inline styleをクリアしてclassで管理）
-    els[newIdx].style.transform = '';
-    els[newIdx].style.opacity   = '';
-    els[newIdx].className = els[newIdx].className
-      .replace(/\s*(active|enter-left|enter-right|exit-left|exit-right)/g, '').trim();
+    // 新スライドをenter位置にセット
+    ANIM.forEach(c => els[newIdx].classList.remove(c));
     const enterClass = dir > 0 ? 'enter-left' : 'enter-right';
     els[newIdx].classList.add(enterClass);
 
@@ -2943,7 +2937,7 @@ function buildSlideshow(slides, s, date, titleOverride) {
     });
 
     // UI更新
-    document.getElementById('ss-dots').innerHTML   = dotsHTML();
+    document.getElementById('ss-dots').innerHTML = dotsHTML();
     document.getElementById('ss-counter').textContent = `${idx + 1} / ${slides.length}`;
     document.getElementById('ss-prev').disabled = idx === 0;
     document.getElementById('ss-next').disabled = idx === slides.length - 1;
