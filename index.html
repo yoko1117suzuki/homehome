@@ -2902,13 +2902,15 @@ function buildSlideshow(slides, s, date, titleOverride) {
     </div>`;
   document.body.appendChild(overlay);
 
-  // 初期状態：classだけで管理（inline styleは使わない）
+  // 初期状態：1枚目はactive、残りはinline styleで右に隠す（transitionなし）
   const slideEls = [...overlay.querySelectorAll('.ss-slide')];
   slideEls.forEach((el, i) => {
     if (i === 0) {
       el.classList.add('active');
     } else {
-      el.classList.add('enter-left'); // 右に隠す
+      el.style.transform = 'translateX(100%)';
+      el.style.opacity = '0';
+      el.style.transition = 'none';
     }
   });
 
@@ -2916,22 +2918,29 @@ function buildSlideshow(slides, s, date, titleOverride) {
     const prevIdx = idx;
     idx = newIdx;
     const els = [...overlay.querySelectorAll('.ss-slide')];
-
     const ANIM = ['active','enter-left','enter-right','exit-left','exit-right'];
 
-    // 現在スライドをexit
+    // 現在スライドをexit（CSS transitionで左/右へ退場）
+    els[prevIdx].style.transition = '';
+    els[prevIdx].style.transform = '';
+    els[prevIdx].style.opacity = '';
     ANIM.forEach(c => els[prevIdx].classList.remove(c));
     els[prevIdx].classList.add(dir > 0 ? 'exit-left' : 'exit-right');
 
-    // 新スライドをenter位置にセット（transition無効→位置確定→transition有効→active）
+    // 新スライドをinline styleで反対側に配置（transitionなしで瞬時に）
     els[newIdx].style.transition = 'none';
+    els[newIdx].style.transform = dir > 0 ? 'translateX(100%)' : 'translateX(-100%)';
+    els[newIdx].style.opacity = '0';
     ANIM.forEach(c => els[newIdx].classList.remove(c));
-    const enterClass = dir > 0 ? 'enter-left' : 'enter-right';
-    els[newIdx].classList.add(enterClass);
-    void els[newIdx].offsetWidth; // 強制リフロー
-    els[newIdx].style.transition = ''; // transition再有効化
-    els[newIdx].classList.remove(enterClass);
-    els[newIdx].classList.add('active');
+    void els[newIdx].offsetWidth; // 強制リフロー：位置を確定
+
+    // 次フレームでtransitionを有効にしてから中央へ移動
+    els[newIdx].style.transition = '';
+    requestAnimationFrame(() => {
+      els[newIdx].style.transform = '';
+      els[newIdx].style.opacity = '';
+      els[newIdx].classList.add('active');
+    });
 
     // UI更新
     document.getElementById('ss-dots').innerHTML = dotsHTML();
