@@ -525,13 +525,8 @@ main {
   display: flex; flex-direction: column;
   align-items: center; justify-content: center;
   padding: 40px;
-  transition: transform 0.4s cubic-bezier(0.4,0,0.2,1), opacity 0.4s;
+  /* transitionはJS(inline style)で制御するためここでは設定しない */
 }
-.ss-slide.enter-left  { transform: translateX(100%); opacity: 0; }
-.ss-slide.enter-right { transform: translateX(-100%); opacity: 0; }
-.ss-slide.active      { transform: translateX(0); opacity: 1; }
-.ss-slide.exit-left   { transform: translateX(-100%); opacity: 0; }
-.ss-slide.exit-right  { transform: translateX(100%); opacity: 0; }
 
 /* イントロスライド */
 .ss-intro {
@@ -2902,45 +2897,35 @@ function buildSlideshow(slides, s, date, titleOverride) {
     </div>`;
   document.body.appendChild(overlay);
 
-  // 初期状態：1枚目はactive、残りはinline styleで右に隠す（transitionなし）
+  // 初期状態：inline styleのみで管理（CSSクラスは使わない）
+  const TRANS = 'transform 0.4s cubic-bezier(0.4,0,0.2,1), opacity 0.4s';
   const slideEls = [...overlay.querySelectorAll('.ss-slide')];
   slideEls.forEach((el, i) => {
-    if (i === 0) {
-      el.classList.add('active');
-    } else {
-      el.style.transform = 'translateX(100%)';
-      el.style.opacity = '0';
-      el.style.transition = 'none';
-    }
+    el.style.transition = 'none';
+    el.style.transform = i === 0 ? 'translateX(0)' : 'translateX(100%)';
+    el.style.opacity   = i === 0 ? '1' : '0';
   });
 
   function goToSlide(newIdx, dir) {
     const prevIdx = idx;
     idx = newIdx;
     const els = [...overlay.querySelectorAll('.ss-slide')];
-    const ANIM = ['active','enter-left','enter-right','exit-left','exit-right'];
 
-    // 現在スライドをexit（CSS transitionで左/右へ退場）
-    els[prevIdx].style.transition = '';
-    els[prevIdx].style.transform = '';
-    els[prevIdx].style.opacity = '';
-    ANIM.forEach(c => els[prevIdx].classList.remove(c));
-    els[prevIdx].classList.add(dir > 0 ? 'exit-left' : 'exit-right');
+    // 現在スライドをアニメーションで退場
+    els[prevIdx].style.transition = TRANS;
+    els[prevIdx].style.transform  = dir > 0 ? 'translateX(-100%)' : 'translateX(100%)';
+    els[prevIdx].style.opacity    = '0';
 
-    // 新スライドをinline styleで反対側に配置（transitionなしで瞬時に）
+    // 新スライドをtransitionなしで反対側に配置
     els[newIdx].style.transition = 'none';
-    els[newIdx].style.transform = dir > 0 ? 'translateX(100%)' : 'translateX(-100%)';
-    els[newIdx].style.opacity = '0';
-    ANIM.forEach(c => els[newIdx].classList.remove(c));
-    void els[newIdx].offsetWidth; // 強制リフロー：位置を確定
+    els[newIdx].style.transform  = dir > 0 ? 'translateX(100%)' : 'translateX(-100%)';
+    els[newIdx].style.opacity    = '0';
+    els[newIdx].getBoundingClientRect(); // 強制リフロー（位置を確定させる）
 
-    // 次フレームでtransitionを有効にしてから中央へ移動
-    els[newIdx].style.transition = '';
-    requestAnimationFrame(() => {
-      els[newIdx].style.transform = '';
-      els[newIdx].style.opacity = '';
-      els[newIdx].classList.add('active');
-    });
+    // transitionを有効にして中央へアニメーション
+    els[newIdx].style.transition = TRANS;
+    els[newIdx].style.transform  = 'translateX(0)';
+    els[newIdx].style.opacity    = '1';
 
     // UI更新
     document.getElementById('ss-dots').innerHTML = dotsHTML();
